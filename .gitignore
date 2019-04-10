@@ -102,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# hwp
+.hwp
+
+result.txt
+input.txt
