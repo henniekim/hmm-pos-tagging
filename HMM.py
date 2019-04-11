@@ -35,10 +35,8 @@ class HMM :
         # parsedCorpus[몇번째 문장인지][해당 문장에서 몇번째 어절인지][해당 어절에서 몇 번째 형태소인지]
         # parsedCorpus[corpusIdx][wordIdx][morphemeIdx]
 
-
     def train(self):
         self.calcInitProb()
-
 
     # 특정 state로 시작할 확률을 구한다
     def calcInitProb(self) :
@@ -61,10 +59,7 @@ class HMM :
         print(sum)
             # plus 1 smoothing for initial state
 
-
-
         # 주어진 품사로 시작할 확률을 구한다.
-        pass
 
     def setState(self) :
         # 어떤 품사가 있는지 정의해준다.
@@ -97,3 +92,4 @@ class HMM :
     # 전이확률 계산 (state1에서 state2로 넘어갈 확률, 여기서는 품사1에서 품사2로 넘어갈 확률)
     def calcTransitionProb(self) :
         pass
+
