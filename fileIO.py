@@ -6,8 +6,8 @@ class Files :
         self.sentence = [] # corpus를 문장 단위로 나누어 저장하는 list
         self.word = [] # 위에서 나눈 문장을 다시 어절 단위로 나누어 저장
         self.result = [] # Smash 출력 결과 저장
-        self.parsedCorpus = [] # 최종 parse된 corpus
-        self.parsedResult = []
+        self.parsedCorpus = [] # 최종 parse된 corpus 파일
+        self.parsedResult = [] # 최종 parse된 result 파일
 
         pass
 

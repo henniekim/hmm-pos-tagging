@@ -21,8 +21,6 @@
 # B : 방출 확률, 특정 품사로 부터 해당 단어가 나올 확률
 # pi : 해당 품사가 처음에 등장할 확률
 
-
-
 class HMM :
     def __init__(self):
         self.count = []
@@ -37,18 +35,38 @@ class HMM :
 
     def train(self):
         self.calcInitProb()
+        pass
 
-    # 특정 state로 시작할 확률을 구한다
+    def setState(self):
+        # 어떤 품사가 있는지 정의해준다.
+        self.state = ['NNG', 'NNP', 'NNB', 'NR', 'NP',
+                      'VV', 'VA', 'VX', 'VCP', 'VCN',
+                      'MM',
+                      'MAG', 'MAJ',
+                      'IC',
+                      'JKS', 'JKC', 'JKG', 'JKO', 'JKB', 'JKV', 'JKQ', 'JX', 'JC',
+                      'EP',
+                      'EF', 'ETN', 'ETM',
+                      'XPN',
+                      'XSN', 'XSV', 'XSA',
+                      'XR',
+                      'SF', 'SP', 'SS', 'SE', 'SO', 'SW',
+                      'NF', 'NV', 'NA',
+                      'SL', 'SH', 'SN']
+
     def calcInitProb(self) :
+        # 특정 품사로 시작할 확률을 구한다
+        # 46 x 1 매트릭스
         self.start = []
         sum = 0
         probSum = 0.0
+
         for sentenceIdx in range (0, len(self.corpus)-2):
             self.start.append(self.corpus[sentenceIdx][0][0])
             self.start[sentenceIdx] = self.start[sentenceIdx].split('/')[1]
 
         for stateIdx in self.state :
-            currentCount = self.start.count(stateIdx) + 1
+            currentCount = self.start.count(stateIdx) + 1  # plus 1 smoothing for initial state
             self.count.append(currentCount)
             sum += currentCount # 전체 개수를 구하고
 
@@ -56,40 +74,32 @@ class HMM :
             self.count[stateIdx] /= sum # 여기서 전체 개수로 나누어서 각 확률을 계산해준다
             probSum += self.count[stateIdx]
 
-        print(sum)
-            # plus 1 smoothing for initial state
+        if __debug__ :
+            print("초기 확률의 합은 {} 입니다.".format(sum))
 
-        # 주어진 품사로 시작할 확률을 구한다.
+        print("초기 확률을 계산하였습니다.") # 완료 메시지
+        pass
 
-    def setState(self) :
-        # 어떤 품사가 있는지 정의해준다.
-        self.state = ['NNG', 'NNP', 'NNB', 'NR', 'NP',
-                 'VV', 'VA', 'VX', 'VCP', 'VCN',
-                 'MM',
-                 'MAG', 'MAJ',
-                 'IC',
-                 'JKS', 'JKC', 'JKG', 'JKO', 'JKB', 'JKV', 'JKQ', 'JX', 'JC',
-                 'EP',
-                 'EF', 'ETN', 'ETM',
-                 'XPN',
-                 'XSN', 'XSV', 'XSA',
-                 'XR',
-                 'SF', 'SP', 'SS', 'SE', 'SO', 'SW',
-                 'NF', 'NV', 'NA',
-                 'SL', 'SH', 'SN']
-
-    # Viterbi 알고리즘
     def viterbi(self) :
+        # Viterbi 알고리즘
         pass
 
-    def setObservationProb(self) :
-        pass
-
-    # 관측확률 계산
     def calcObservationProb(self) :
+        # 관측확률 계산 (특정 state에서 특정 단어가 나올 확률)
+        # emission probability
+        # output probability
+        # 46 x (corpus에 존재하는 단어/형태소 개수) 매트릭스가 나오면 된다.
         pass
 
-    # 전이확률 계산 (state1에서 state2로 넘어갈 확률, 여기서는 품사1에서 품사2로 넘어갈 확률)
     def calcTransitionProb(self) :
+        # 전이확률 계산 (state1에서 state2로 넘어갈 확률, 여기서는 품사1에서 품사2로 넘어갈 확률)
+        # 내가 이해한 것이 맞다면
+        # 48 x 48 매트릭스가 나오면 된다... -> 46개의 품사 + $tart + &nd
+        # self.transition[currentState][nextState]
+        #    0  1  2  3
+        # 0                : 0 state i번째 state로  넘어갈 확률 : 요 줄의 합은 1이 되어야 한다.
+        # 1
+        # 2
+        # 3
         pass
 

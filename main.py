@@ -1,3 +1,13 @@
+## 10. April. 2019
+## Dong Hyun Kim @ Sogang Univ
+## Using Hidden Markov Model to Tag Part Of Speech with Viterbi Algorithm
+
+## 한국어 형태소 분석기
+
+## 1. 코드 모듈화 연습
+## 2. 객체 지향 연습
+## 3. 간결하고 이해하기 쉽게 작성
+
 from HMM import *
 from fileIO import *
 
