@@ -35,28 +35,30 @@ class HMM :
 
     def train(self):
         self.calcInitProb()
+        self.calcTransitionBetweenWord()
         pass
 
     def setState(self):
         # 어떤 품사가 있는지 정의해준다.
-        self.state = ['NNG', 'NNP', 'NNB', 'NR', 'NP',
-                      'VV', 'VA', 'VX', 'VCP', 'VCN',
-                      'MM',
-                      'MAG', 'MAJ',
-                      'IC',
-                      'JKS', 'JKC', 'JKG', 'JKO', 'JKB', 'JKV', 'JKQ', 'JX', 'JC',
-                      'EP',
-                      'EF', 'ETN', 'ETM',
-                      'XPN',
-                      'XSN', 'XSV', 'XSA',
-                      'XR',
-                      'SF', 'SP', 'SS', 'SE', 'SO', 'SW',
-                      'NF', 'NV', 'NA',
-                      'SL', 'SH', 'SN']
+        self.state = {'NNG': 0, 'NNP': 1, 'NNB': 2, 'NR': 3, 'NP': 4,  # 5
+                      'VV': 5, 'VA': 6, 'VX': 7, 'VCP': 8, 'VCN': 9,  # 5
+                      'MM': 10,  # 1
+                      'MAG': 11, 'MAJ': 12,  # 2
+                      'IC': 13,  # 1
+                      'JKS': 14, 'JKC': 15, 'JKG': 16, 'JKO': 17, 'JKB': 18, 'JKV': 19, 'JKQ': 20, 'JX': 21, 'JC': 22,  # 9
+                      'EP': 23,  # 1
+                      'EF': 24, 'EC': 25, 'ETN': 26, 'ETM': 27,  # 4
+                      'XPN': 28,  # 1
+                      'XSN': 29, 'XSV': 30, 'XSA': 31,  # 3
+                      'XR': 32,  # 1
+                      'SF': 33, 'SP': 34, 'SS': 35, 'SE': 36, 'SO': 37, 'SW': 38,  # 6
+                      'NF': 39, 'NV': 40, 'NA': 41,  # 3
+                      'SL': 42, 'SH': 43, 'SN': 44,  # 2
+                      'START': 45, 'END': 46}  # 2
 
     def calcInitProb(self) :
         # 특정 품사로 시작할 확률을 구한다
-        # 46 x 1 매트릭스
+        # 47 x 1 매트릭스
         self.start = []
         sum = 0
         probSum = 0.0
@@ -70,9 +72,9 @@ class HMM :
             self.count.append(currentCount)
             sum += currentCount # 전체 개수를 구하고
 
-        for stateIdx in range(len(self.state)):
-            self.count[stateIdx] /= sum # 여기서 전체 개수로 나누어서 각 확률을 계산해준다
-            probSum += self.count[stateIdx]
+        # for stateIdx in range(len(self.state)):
+        #     self.count[stateIdx] /= sum # 여기서 전체 개수로 나누어서 각 확률을 계산해준다
+        #     probSum += self.count[stateIdx]
 
         if __debug__ :
             print("초기 확률의 합은 {} 입니다.".format(sum))
@@ -91,15 +93,42 @@ class HMM :
         # 46 x (corpus에 존재하는 단어/형태소 개수) 매트릭스가 나오면 된다.
         pass
 
-    def calcTransitionProb(self) :
+    def calcTransitionBetweenWord(self) :
+        # 어절 간 변환 확률
+        # 뭔가 따로 계산해야 될 것 같다.
         # 전이확률 계산 (state1에서 state2로 넘어갈 확률, 여기서는 품사1에서 품사2로 넘어갈 확률)
         # 내가 이해한 것이 맞다면
-        # 48 x 48 매트릭스가 나오면 된다... -> 46개의 품사 + $tart + &nd
+        # 47 x 47 매트릭스가 나오면 된다... -> 45개의 품사 + $tart + &nd
         # self.transition[currentState][nextState]
         #    0  1  2  3
         # 0                : 0 state i번째 state로  넘어갈 확률 : 요 줄의 합은 1이 되어야 한다.
         # 1
         # 2
         # 3
+        # transitionBetweenWordRow = []
+        self.transitionBetweenWord = []
+
+        for stateIdx in range (len(self.state)):
+            transitionBetweenWordRow = []
+            for stateIdx in range (len(self.state)):
+                transitionBetweenWordRow.append(1) # Plus one smoothing
+            self.transitionBetweenWord.append(transitionBetweenWordRow)
+
+        # 일단 여기 까지 47 x 47 matrix 1으로 초기화 완료
+        # 각 state 별로 parsing 시작
+        for sentenceIdx in range (len(self.corpus)-2):
+            for wordIdx in range (len(self.corpus[sentenceIdx])-1):
+                currentLastWordState = self.corpus[sentenceIdx][wordIdx][-1].split('/')[-1]
+                nextFirstWordState = self.corpus[sentenceIdx][wordIdx+1][0].split('/')[-1]
+                # 이거를 dictionary key value로 사용하기
+                if currentLastWordState == '' or nextFirstWordState == '':
+                    continue
+                else:
+                    self.transitionBetweenWord[self.state[currentLastWordState]][self.state[nextFirstWordState]] += 1
+        pass
+
+
+    def calcTransitionInWord(self):
+        # 단어 내부 간 변환 확률
         pass
 
