@@ -21,6 +21,8 @@
 # B : 방출 확률, 특정 품사로 부터 해당 단어가 나올 확률
 # pi : 해당 품사가 처음에 등장할 확률
 
+from set import *
+
 class HMM :
     def __init__(self):
         self.count = []
@@ -35,7 +37,9 @@ class HMM :
 
     def train(self):
         self.calcInitProb()
-        self.calcTransitionBetweenWord()
+        self.calcTransitionBetweenWord() # 어절 간 변이 확률 구하기
+        self.calcTransitionInWord() # 한 어절 내부에서 상태 변이 확률 구하기
+        self.calcObservationProb() # 각 상태에서 해당 단어가 나올 확률 구하기
         pass
 
     def setState(self):
@@ -91,6 +95,27 @@ class HMM :
         # emission probability
         # output probability
         # 46 x (corpus에 존재하는 단어/형태소 개수) 매트릭스가 나오면 된다.
+
+        self.countMorpheme()
+
+        pass
+
+        # def countItem(self, key):
+        #     count = 0
+        #     for countIdx in range(len(self.contents)):
+        #         if self.contents[countIdx] == key :
+        #             count += 1
+        #         else :
+        #             pass
+        #     return count
+
+    def countMorpheme(self):
+        morphemeSet = Set()
+        for sentenceIdx in range (len(self.corpus)-2):
+            for wordIdx in range (len(self.corpus[sentenceIdx])):
+                for morphemeIdx in range (len(self.corpus[sentenceIdx][wordIdx])):
+                    morphemeSet.addElement(self.corpus[sentenceIdx][wordIdx][morphemeIdx].split('/')[0])
+
         pass
 
     def calcTransitionBetweenWord(self) :
@@ -105,16 +130,9 @@ class HMM :
         # 1
         # 2
         # 3
-        # transitionBetweenWordRow = []
-        self.transitionBetweenWord = []
 
-        for stateIdx in range (len(self.state)):
-            transitionBetweenWordRow = []
-            for stateIdx in range (len(self.state)):
-                transitionBetweenWordRow.append(1) # Plus one smoothing
-            self.transitionBetweenWord.append(transitionBetweenWordRow)
+        self.transitionBetweenWord = self.initTable(len(self.state), 1) # 초기화
 
-        # 일단 여기 까지 47 x 47 matrix 1으로 초기화 완료
         # 각 state 별로 parsing 시작
         for sentenceIdx in range (len(self.corpus)-2):
             for wordIdx in range (len(self.corpus[sentenceIdx])-1):
@@ -124,11 +142,34 @@ class HMM :
                 if currentLastWordState == '' or nextFirstWordState == '':
                     continue
                 else:
-                    self.transitionBetweenWord[self.state[currentLastWordState]][self.state[nextFirstWordState]] += 1
+                    self.transitionBetweenWord[self.state[currentLastWordState.upper()]][self.state[nextFirstWordState.upper()]] += 1
         pass
-
 
     def calcTransitionInWord(self):
+        self.transitionInWord = self.initTable(len(self.state), 1)  # 초기화
         # 단어 내부 간 변환 확률
+        for sentenceIdx in range (len(self.corpus)-2):
+            for wordIdx in range (len(self.corpus[sentenceIdx])-1):
+                for internalIdx in range (len(self.corpus[sentenceIdx][wordIdx])-1):
+                    currentWordState = self.corpus[sentenceIdx][wordIdx][internalIdx].split('/')[-1]
+                    nextWordState = self.corpus[sentenceIdx][wordIdx][internalIdx+1].split('/')[-1]
+                    if currentWordState == '' or nextWordState == '' :
+                        continue
+                    else:
+                        self.transitionInWord[self.state[currentWordState.upper()]][self.state[nextWordState.upper()]] += 1
         pass
+
+    def initTable(self, numberOfState, initialValue):
+        resultTable = []
+        for stateIdx in range(numberOfState):
+            resultTableRow = []
+            for stateIdx in range(numberOfState):
+                resultTableRow.append(initialValue)
+            resultTable.append(resultTableRow)
+
+        return resultTable
+
+
+
+
 
