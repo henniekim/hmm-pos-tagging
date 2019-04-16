@@ -21,6 +21,12 @@
 # B : 방출 확률, 특정 품사로 부터 해당 단어가 나올 확률
 # pi : 해당 품사가 처음에 등장할 확률
 
+
+#TODO 파일 저장되는 순서 변경 (학습 중간중간에 저장하도록)
+#TODO 학습 진행 시 Progress Bar 추가 하기
+#TODO 초기확률 & 마지막 확률 구하기 (저장도 따로 하도록)
+
+#TODO Viterbi 알고리즘 구현
 from set import *
 
 class HMM :
@@ -40,6 +46,29 @@ class HMM :
         self.calcTransitionBetweenWord() # 어절 간 변이 확률 구하기
         self.calcTransitionInWord() # 한 어절 내부에서 상태 변이 확률 구하기
         self.calcObservationProb() # 각 상태에서 해당 단어가 나올 확률 구하기
+        self.saveResult()
+        pass
+
+    def saveResult(self):
+        with open("observationProbability.txt", 'w') as observation :
+            for stateIdx in range (len(self.state)):
+                for wordIdx in range (len(self.dictionary)):
+                    observation.write(str(self.observationProb[stateIdx][wordIdx])+' ')
+                observation.write('\n')
+
+        with open("transitionBetweenWord.txt", 'w') as transitionBetweenWord :
+            for stateIdxY in range (len(self.state)):
+                for stateIdxX in range (len(self.state)):
+                    transitionBetweenWord.write(str(self.transitionBetweenWord[stateIdxY][stateIdxX])+' ')
+                transitionBetweenWord.write('\n')
+
+        with open("transitionInWord.txt", 'w') as transitionInWord :
+            for stateIdxY in range (len(self.state)):
+                for stateIdxX in range (len(self.state)):
+                    transitionInWord.write(str(self.transitionInWord[stateIdxY][stateIdxX])+' ')
+                transitionInWord.write('\n')
+
+        print("학습 파일을 모두 저장하였습니다.")
         pass
 
     def setState(self):
@@ -97,6 +126,19 @@ class HMM :
         # 46 x (corpus에 존재하는 단어/형태소 개수) 매트릭스가 나오면 된다.
 
         self.countMorpheme()
+        self.observationProb = self.initTable(len(self.state), len(self.dictionary), 1) # 초기화
+
+        for sentenceIdx in range (len(self.corpus)):
+            for wordIdx in range (len(self.corpus[sentenceIdx])):
+                for morphemeIdx in range (len(self.corpus[sentenceIdx][wordIdx])):
+                    currentTag = self.corpus[sentenceIdx][wordIdx][morphemeIdx].split('/')[-1]
+                    currentWord = self.corpus[sentenceIdx][wordIdx][morphemeIdx].split('/')[0]
+                    if currentTag == '' or currentWord == '' :
+                        continue
+                    else:
+                        self.observationProb[self.state[currentTag.upper()]][self.dictionary[currentWord]] += 1
+
+        print("관측 확률을 학습하였습니다")
 
         pass
 
@@ -114,7 +156,14 @@ class HMM :
         for sentenceIdx in range (len(self.corpus)-2):
             for wordIdx in range (len(self.corpus[sentenceIdx])):
                 for morphemeIdx in range (len(self.corpus[sentenceIdx][wordIdx])):
-                    morphemeSet.addElement(self.corpus[sentenceIdx][wordIdx][morphemeIdx].split('/')[0])
+                    morphemeSet.addElement(self.corpus[sentenceIdx][wordIdx][morphemeIdx].split('/')[0]) ## 최적화 필요
+
+        self.dictionary = {}
+
+        for dictIdx in range (len(morphemeSet.contents)):
+            self.dictionary[morphemeSet.contents[dictIdx]] = dictIdx
+
+        print("사전을 구축하였습니다")
 
         pass
 
@@ -130,8 +179,7 @@ class HMM :
         # 1
         # 2
         # 3
-
-        self.transitionBetweenWord = self.initTable(len(self.state), 1) # 초기화
+        self.transitionBetweenWord = self.initTable(len(self.state), len(self.state), 1) # 초기화
 
         # 각 state 별로 parsing 시작
         for sentenceIdx in range (len(self.corpus)-2):
@@ -143,10 +191,12 @@ class HMM :
                     continue
                 else:
                     self.transitionBetweenWord[self.state[currentLastWordState.upper()]][self.state[nextFirstWordState.upper()]] += 1
+
+        print("단어 간 전이 확률을 학습하였습니다")
         pass
 
     def calcTransitionInWord(self):
-        self.transitionInWord = self.initTable(len(self.state), 1)  # 초기화
+        self.transitionInWord = self.initTable(len(self.state), len(self.state), 1)  # 초기화
         # 단어 내부 간 변환 확률
         for sentenceIdx in range (len(self.corpus)-2):
             for wordIdx in range (len(self.corpus[sentenceIdx])-1):
@@ -157,13 +207,15 @@ class HMM :
                         continue
                     else:
                         self.transitionInWord[self.state[currentWordState.upper()]][self.state[nextWordState.upper()]] += 1
+
+        print("단어 내부 전이 확률을 학습하였습니다")
         pass
 
-    def initTable(self, numberOfState, initialValue):
+    def initTable(self, numberOfState, numberOfWord, initialValue):
         resultTable = []
         for stateIdx in range(numberOfState):
             resultTableRow = []
-            for stateIdx in range(numberOfState):
+            for stateIdx in range(numberOfWord):
                 resultTableRow.append(initialValue)
             resultTable.append(resultTableRow)
 
