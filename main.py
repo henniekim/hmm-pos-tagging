@@ -31,7 +31,8 @@ hmm.setState() # 세종 형태소 종류를 세팅한다.
 if mode == 'train' :
     hmm.train() # 학습을 한다.
 
-
+pass
+hmm.viterbi(file.parsedResult[0][0][1])
 #TODO
 #hmm.viterbi()
 #hmm.displaySolution() # 추론 결과를 도출한다.

@@ -1,4 +1,3 @@
-
 # HMM 이론
 
 ###############################################
@@ -27,7 +26,9 @@
 #TODO 초기확률 & 마지막 확률 구하기 (저장도 따로 하도록)
 
 #TODO Viterbi 알고리즘 구현
-from set import *
+#TODO 모든 형태소에 대해 분석 가능하도록 구현
+from progressBar import *
+import math
 
 class HMM :
     def __init__(self):
@@ -42,6 +43,7 @@ class HMM :
         # parsedCorpus[corpusIdx][wordIdx][morphemeIdx]
 
     def train(self):
+        self.countMorpheme()
         self.calcInitProb()
         self.calcTransitionBetweenWord() # 어절 간 변이 확률 구하기
         self.calcTransitionInWord() # 한 어절 내부에서 상태 변이 확률 구하기
@@ -105,18 +107,91 @@ class HMM :
             self.count.append(currentCount)
             sum += currentCount # 전체 개수를 구하고
 
-        # for stateIdx in range(len(self.state)):
-        #     self.count[stateIdx] /= sum # 여기서 전체 개수로 나누어서 각 확률을 계산해준다
-        #     probSum += self.count[stateIdx]
+        for stateIdx in range(len(self.state)):
+            self.count[stateIdx] /= sum # 여기서 전체 개수로 나누어서 각 확률을 계산해준다
+            probSum += self.count[stateIdx]
 
-        if __debug__ :
-            print("초기 확률의 합은 {} 입니다.".format(sum))
+        for stateIdx in range(len(self.state)):
+            self.count[stateIdx] = math.log(self.count[stateIdx])
+
+        # if __debug__ :
+        #     print("초기 확률의 합은 {} 입니다.".format(sum))
 
         print("초기 확률을 계산하였습니다.") # 완료 메시지
         pass
 
-    def viterbi(self) :
-        # Viterbi 알고리즘
+    def viterbi(self, observedSequence) :
+        # 아이스크림 예제에서
+        # 아이스크림 개수 sequence가 주어졌을때 most probable state sequence를 찾는 문제.
+
+        # 형태소열을 주었을 때, 가장 알맞는 형태소 분석 결과를 찾는 문제
+        # observedSequence string 을 1. 안녕/NNG+하/NNG+세/NNB+요/EC
+        observedSequence = observedSequence.split(' ')[-1]
+        observedSequence = observedSequence.split('+') # 안녕/NNG 하/NNG 세/NNB 요/EC
+        T = len(observedSequence)
+        N = len(self.state) # 여기는 start, end 포함되어있기 때문에 +2를 하지 않아도 된다.
+        for sequenceIdx in range (T):
+            observedSequence[sequenceIdx] = observedSequence[sequenceIdx].split('/')[0]
+
+
+
+        # TODO 1 initialize
+        # T : observation of len
+        # N : state-graph of len
+        # create path probability matrix [N+2, T]
+        self.viterbiMatrix = self.initTable(N, 2, 1) # maximum 확률 구하기
+        self.backTraceMatrix = []
+
+        currentMax = -99999999
+        argmax = 0
+
+        for stateIdx in range(len(self.state)):
+            currentProb = self.count[stateIdx] + self.getObservationProb(stateIdx, observedSequence[0])
+            self.viterbiMatrix[stateIdx][0] = currentProb
+            # self.backTraceMatrix[stateIdx][0] = 0
+
+
+        # TODO 2 recursion
+
+        for sequenceIdx in range(1,len(observedSequence)):
+            previousState = {}
+            for currentStateIdx in range(len(self.state)):
+                maxProb = -99999999
+                maxState = 0
+                for previousStateIdx in range(len(self.state)):
+                    transitionProb = self.viterbiMatrix[previousStateIdx][0] + self.getTransitionInWord(previousStateIdx, currentStateIdx)
+
+                    if transitionProb > maxProb:
+                        maxProb = transitionProb
+                        maxState = previousStateIdx
+
+                observationProb = self.getObservationProb(currentStateIdx, observedSequence[sequenceIdx])
+                self.viterbiMatrix[currentStateIdx][1] = maxProb + observationProb
+                self.viterbiMatrix[currentStateIdx][0] = self.viterbiMatrix[currentStateIdx][1]
+                previousState[currentStateIdx] = maxState
+
+            # print(currentProb)
+            self.backTraceMatrix.append(previousState)
+
+        # TODO 3 termination
+
+        # return - backpointer[end,
+        maxState = 0
+        maxProb = -99999999
+
+        for stateIdx in range(len(self.state)):
+            if self.viterbiMatrix[stateIdx][0] > maxProb:
+                maxProb = self.viterbiMatrix[stateIdx][0]
+                maxState = stateIdx
+
+
+        result = [maxState]
+
+        for idx in range(len(observedSequence) -1, 0, -1):
+            maxState = self.backTraceMatrix[idx-1][maxState]
+            result.insert(0, maxState)
+
+        print(result)
         pass
 
     def calcObservationProb(self) :
@@ -125,8 +200,9 @@ class HMM :
         # output probability
         # 46 x (corpus에 존재하는 단어/형태소 개수) 매트릭스가 나오면 된다.
 
-        self.countMorpheme()
+
         self.observationProb = self.initTable(len(self.state), len(self.dictionary), 1) # 초기화
+        printProgressBar(0, len(self.corpus), prefix = '관측 확률 학습하는 중 :', suffix = 'Complete', length = 50)
 
         for sentenceIdx in range (len(self.corpus)):
             for wordIdx in range (len(self.corpus[sentenceIdx])):
@@ -137,34 +213,33 @@ class HMM :
                         continue
                     else:
                         self.observationProb[self.state[currentTag.upper()]][self.dictionary[currentWord]] += 1
+            printProgressBar(sentenceIdx+1, len(self.corpus), prefix = '관측 확률 학습하는 중 :', suffix= 'Complete', length = 50)
 
-        print("관측 확률을 학습하였습니다")
+        # 확률로 만들어준다.
+        for stateIdx in range(len(self.state)):
+            for wordIdx in range(len(self.dictionary)):
+                self.observationProb[stateIdx][wordIdx] = math.log(self.observationProb[stateIdx][wordIdx]/(len(self.state)*len(self.dictionary)))
 
         pass
 
-        # def countItem(self, key):
-        #     count = 0
-        #     for countIdx in range(len(self.contents)):
-        #         if self.contents[countIdx] == key :
-        #             count += 1
-        #         else :
-        #             pass
-        #     return count
-
     def countMorpheme(self):
-        morphemeSet = Set()
+        morphemeSet = set()
+
+        printProgressBar(0, len(self.corpus)-2, prefix='사전에 있는 형태소 개수 구하는 중 :', suffix='Complete', length=50)
         for sentenceIdx in range (len(self.corpus)-2):
             for wordIdx in range (len(self.corpus[sentenceIdx])):
                 for morphemeIdx in range (len(self.corpus[sentenceIdx][wordIdx])):
-                    morphemeSet.addElement(self.corpus[sentenceIdx][wordIdx][morphemeIdx].split('/')[0]) ## 최적화 필요
+                    morphemeSet.add(self.corpus[sentenceIdx][wordIdx][morphemeIdx].split('/')[0])
+
+            printProgressBar(sentenceIdx + 1, len(self.corpus)-2, prefix='사전에 있는 형태소 개수 구하는 중 :', suffix='Complete', length=50)
 
         self.dictionary = {}
+        morphemeSet = list(morphemeSet)
 
-        for dictIdx in range (len(morphemeSet.contents)):
-            self.dictionary[morphemeSet.contents[dictIdx]] = dictIdx
-
-        print("사전을 구축하였습니다")
-
+        printProgressBar(0, len(morphemeSet), prefix='사전 구축하는 중 :', suffix='Complete', length=50)
+        for dictIdx in range (len(morphemeSet)):
+            printProgressBar(dictIdx + 1, len(morphemeSet), prefix='사전 구축하는 중 :', suffix='Complete', length=50)
+            self.dictionary[morphemeSet[dictIdx]] = dictIdx
         pass
 
     def calcTransitionBetweenWord(self) :
@@ -180,6 +255,7 @@ class HMM :
         # 2
         # 3
         self.transitionBetweenWord = self.initTable(len(self.state), len(self.state), 1) # 초기화
+        printProgressBar(0, len(self.corpus)-2, prefix='어절 간 변환 확률 계산 중 :', suffix='Complete', length=50)
 
         # 각 state 별로 parsing 시작
         for sentenceIdx in range (len(self.corpus)-2):
@@ -191,13 +267,26 @@ class HMM :
                     continue
                 else:
                     self.transitionBetweenWord[self.state[currentLastWordState.upper()]][self.state[nextFirstWordState.upper()]] += 1
+            printProgressBar(sentenceIdx + 1, len(self.corpus)-2, prefix='어절 간 변환 확률 계산 중 :', suffix='Complete', length=50)
 
-        print("단어 간 전이 확률을 학습하였습니다")
+
+        for stateIdxX in range (len(self.state)):
+            sum = 0
+            probsum = 0
+            for stateIdxY in range (len(self.state)):
+                sum += self.transitionBetweenWord[stateIdxX][stateIdxY]
+
+            for stateIdxY in range (len(self.state)):
+                self.transitionBetweenWord[stateIdxX][stateIdxY] = math.log(self.transitionBetweenWord[stateIdxX][stateIdxY]/sum)
+                # probsum += self.transitionBetweenWord[stateIdxX][stateIdxY]
+            # print(sum)
+            # print(probsum)
         pass
 
     def calcTransitionInWord(self):
         self.transitionInWord = self.initTable(len(self.state), len(self.state), 1)  # 초기화
         # 단어 내부 간 변환 확률
+        printProgressBar(0, len(self.corpus) - 2, prefix='단어 내부 간 변환 확률 계산 중 :', suffix='Complete', length=50)
         for sentenceIdx in range (len(self.corpus)-2):
             for wordIdx in range (len(self.corpus[sentenceIdx])-1):
                 for internalIdx in range (len(self.corpus[sentenceIdx][wordIdx])-1):
@@ -207,8 +296,16 @@ class HMM :
                         continue
                     else:
                         self.transitionInWord[self.state[currentWordState.upper()]][self.state[nextWordState.upper()]] += 1
+            printProgressBar(sentenceIdx + 1, len(self.corpus) - 2, prefix='단어 내부 간 변환 확률 계산 중 :', suffix='Complete', length=50)
 
-        print("단어 내부 전이 확률을 학습하였습니다")
+        for stateIdxX in range(len(self.state)):
+            sum = 0
+            probsum = 0
+            for stateIdxY in range(len(self.state)):
+                sum += self.transitionInWord[stateIdxX][stateIdxY]
+
+            for stateIdxY in range(len(self.state)):
+                self.transitionInWord[stateIdxX][stateIdxY] = math.log(self.transitionInWord[stateIdxX][stateIdxY]/sum)
         pass
 
     def initTable(self, numberOfState, numberOfWord, initialValue):
@@ -218,10 +315,13 @@ class HMM :
             for stateIdx in range(numberOfWord):
                 resultTableRow.append(initialValue)
             resultTable.append(resultTableRow)
-
         return resultTable
 
+    def getTransitionBetweenWord(self, currentState, nextState):
+        return self.transitionBetweenWord[currentState][nextState]
 
+    def getTransitionInWord(self, currentState, nextState):
+        return self.transitionInWord[currentState][nextState]
 
-
-
+    def getObservationProb(self, currentState, currentWord):
+        return self.observationProb[currentState][self.dictionary[currentWord]]
