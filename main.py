@@ -18,8 +18,8 @@ hmm = HMM()
 
 if mode == 'manual' : # 문장을 직접 입력하는 모드
     file.writeInput() # 분석할 문장을 입력한다.
-    file.openSmash() # 스매쉬 실행해서 결과 저장 및 출력
 
+file.openSmash()  # 스매쉬 실행해서 결과 저장 및 출력
 file.openResult() # 결과 파일을 불러온다.
 file.parseResult() # 결과 파일을 가공하기 좋게 파싱
 
@@ -28,14 +28,14 @@ file.parseCorpus() # 말뭉치를 가공하기 좋게 파싱
 hmm.setCorpus(file.parsedCorpus) # Corpus 세팅
 hmm.setState() # 세종 형태소 종류를 세팅한다.
 
+
 if mode == 'train' :
     hmm.train() # 학습을 한다.
 
-pass
-hmm.viterbi(file.parsedResult[0][0][1])
+for sentenceIdx in range(len(file.parsedResult)):
+    result = hmm.viterbi(file.parsedResult[sentenceIdx])
+
 #TODO
-#hmm.viterbi()
-#hmm.displaySolution() # 추론 결과를 도출한다.
 #file.saveResult(hmm.result) # 결과를 저장한다.
 
 

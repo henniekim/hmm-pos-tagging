@@ -22,17 +22,22 @@
 
 
 #TODO 파일 저장되는 순서 변경 (학습 중간중간에 저장하도록)
-#TODO 학습 진행 시 Progress Bar 추가 하기
-#TODO 초기확률 & 마지막 확률 구하기 (저장도 따로 하도록)
+#DONE 학습 진행 시 Progress Bar 추가 하기 -
+#TODO 초기확률 & 마지막 확률 구하기 (저장도 따로 하도록) - 마지막 확률은 구할 필요 없음
 
-#TODO Viterbi 알고리즘 구현
-#TODO 모든 형태소에 대해 분석 가능하도록 구현
+#DONE Viterbi 알고리즘 구현
+#DONE 모든 형태소에 대해 분석 가능하도록 구현
+
+#TODO 저장하는 부분 구현
+#TODO
 from progressBar import *
 import math
 
 class HMM :
     def __init__(self):
         self.count = []
+        with open("output.txt", 'w') as output :
+            output.write('')
         # 생성자
 
     def setCorpus(self, inputCorpus):
@@ -48,10 +53,10 @@ class HMM :
         self.calcTransitionBetweenWord() # 어절 간 변이 확률 구하기
         self.calcTransitionInWord() # 한 어절 내부에서 상태 변이 확률 구하기
         self.calcObservationProb() # 각 상태에서 해당 단어가 나올 확률 구하기
-        self.saveResult()
+        self.saveTrain()
         pass
 
-    def saveResult(self):
+    def saveTrain(self):
         with open("observationProbability.txt", 'w') as observation :
             for stateIdx in range (len(self.state)):
                 for wordIdx in range (len(self.dictionary)):
@@ -120,79 +125,82 @@ class HMM :
         print("초기 확률을 계산하였습니다.") # 완료 메시지
         pass
 
-    def viterbi(self, observedSequence) :
-        # 아이스크림 예제에서
-        # 아이스크림 개수 sequence가 주어졌을때 most probable state sequence를 찾는 문제.
+    def viterbi(self, sentence):
+        T = len(sentence) # 단어 개수
+        N = len(self.state) # 32
 
-        # 형태소열을 주었을 때, 가장 알맞는 형태소 분석 결과를 찾는 문제
-        # observedSequence string 을 1. 안녕/NNG+하/NNG+세/NNB+요/EC
-        observedSequence = observedSequence.split(' ')[-1]
-        observedSequence = observedSequence.split('+') # 안녕/NNG 하/NNG 세/NNB 요/EC
-        T = len(observedSequence)
-        N = len(self.state) # 여기는 start, end 포함되어있기 때문에 +2를 하지 않아도 된다.
-        for sequenceIdx in range (T):
-            observedSequence[sequenceIdx] = observedSequence[sequenceIdx].split('/')[0]
-
-
-
-        # TODO 1 initialize
-        # T : observation of len
-        # N : state-graph of len
-        # create path probability matrix [N+2, T]
-        self.viterbiMatrix = self.initTable(N, 2, 1) # maximum 확률 구하기
+        # TODO 1.INIT
+        self.viterbiMatrix = self.initTable(33, 2, 1)
         self.backTraceMatrix = []
+        initialTransitionProb = []
+        for morphemeListIdx in range(1, len(sentence[0])): # 첫번째 어절의 맨 처음 형태소
+            initWord = sentence[0][morphemeListIdx]
+            initWord = initWord.split(' ')[-1]
+            initWord = initWord.split('+')[0]
+            currentState = initWord.split('/')[-1]
 
-        currentMax = -99999999
-        argmax = 0
+            initTransitionProb = self.count[self.state[currentState]]
+            wordObservationProb = self.getWordObservationProb(sentence[0][morphemeListIdx])
+            self.viterbiMatrix[morphemeListIdx][0] = initTransitionProb + wordObservationProb
 
-        for stateIdx in range(len(self.state)):
-            currentProb = self.count[stateIdx] + self.getObservationProb(stateIdx, observedSequence[0])
-            self.viterbiMatrix[stateIdx][0] = currentProb
-            # self.backTraceMatrix[stateIdx][0] = 0
-
-
-        # TODO 2 recursion
-
-        for sequenceIdx in range(1,len(observedSequence)):
-            previousState = {}
-            for currentStateIdx in range(len(self.state)):
+        # TODO 2.RECURSION
+        for wordIdx in range(1, T):
+            previous = {}
+            for currentMorphemeListIdx in range(1, len(sentence[wordIdx])):
                 maxProb = -99999999
                 maxState = 0
-                for previousStateIdx in range(len(self.state)):
-                    transitionProb = self.viterbiMatrix[previousStateIdx][0] + self.getTransitionInWord(previousStateIdx, currentStateIdx)
+                currentFirstWord = sentence[wordIdx][1]
+                currentFirstWord = currentFirstWord.split(' ')[-1]
+                currentFirstMorpheme = currentFirstWord.split('+')[0]
+                currentState = currentFirstMorpheme.split('/')[-1]
+                for previousMorphemeListIdx in range(1, len(sentence[wordIdx-1])):
+                    previousLastWord = sentence[wordIdx-1][previousMorphemeListIdx] # 마지막 단어
+                    previousLastWord = previousLastWord.split(' ')[-1]
+                    previousLastMorpheme = previousLastWord.split('+')[-1]
+                    previousState = previousLastMorpheme.split('/')[-1]
+                    transitionProb = self.viterbiMatrix[previousMorphemeListIdx][0] + self.getTransitionBetweenWord(self.state[previousState], self.state[currentState])
 
                     if transitionProb > maxProb:
                         maxProb = transitionProb
-                        maxState = previousStateIdx
+                        maxState = previousMorphemeListIdx
 
-                observationProb = self.getObservationProb(currentStateIdx, observedSequence[sequenceIdx])
-                self.viterbiMatrix[currentStateIdx][1] = maxProb + observationProb
-                self.viterbiMatrix[currentStateIdx][0] = self.viterbiMatrix[currentStateIdx][1]
-                previousState[currentStateIdx] = maxState
+                currentWord = sentence[wordIdx][currentMorphemeListIdx]
+                currentWord = currentWord.split(' ')[-1]
 
-            # print(currentProb)
-            self.backTraceMatrix.append(previousState)
+                observationProb = self.getWordObservationProb(currentWord)
+                self.viterbiMatrix[currentMorphemeListIdx][1] = maxProb + observationProb
+                self.viterbiMatrix[currentMorphemeListIdx][0] = self.viterbiMatrix[currentMorphemeListIdx][1]
+                previous[currentMorphemeListIdx] = maxState
 
-        # TODO 3 termination
+            self.backTraceMatrix.append(previous)
 
-        # return - backpointer[end,
+        # TODO 3. TERMINATION
         maxState = 0
         maxProb = -99999999
 
-        for stateIdx in range(len(self.state)):
-            if self.viterbiMatrix[stateIdx][0] > maxProb:
-                maxProb = self.viterbiMatrix[stateIdx][0]
-                maxState = stateIdx
-
+        for currentMorphemeListIdx in range(1, len(sentence[-1])):
+            if self.viterbiMatrix[currentMorphemeListIdx][0] > maxProb :
+                maxProb = self.viterbiMatrix[currentMorphemeListIdx][0]
+                maxState = currentMorphemeListIdx
 
         result = [maxState]
 
-        for idx in range(len(observedSequence) -1, 0, -1):
+        # TODO 4. BACK TRACE
+        for idx in range(len(sentence) -1, 0, -1):
             maxState = self.backTraceMatrix[idx-1][maxState]
             result.insert(0, maxState)
 
-        print(result)
-        pass
+        for wordIdx in range(len(sentence)):
+            print(sentence[wordIdx][result[wordIdx]].split(' ')[-1])
+
+        with open("output.txt", 'a') as output:
+            for wordIdx in range(len(sentence)):
+                output.write(str(sentence[wordIdx][result[wordIdx]].split(' ')[-1]))
+                output.write('\n')
+            output.write('\n')
+
+        # TODO RETURN PARSED SEQUENCE
+        return
 
     def calcObservationProb(self) :
         # 관측확률 계산 (특정 state에서 특정 단어가 나올 확률)
@@ -323,5 +331,37 @@ class HMM :
     def getTransitionInWord(self, currentState, nextState):
         return self.transitionInWord[currentState][nextState]
 
+    def getWordObservationProb(self, MorphemeList):
+        morpheme = MorphemeList.split(' ')[-1]
+        morpheme = morpheme.split('+')
+        prob = 0
+        for morphemeIdx in range (0, len(morpheme)):
+            if morphemeIdx == len(morpheme)-1: # 마지막 형태소는 관측확률만 있다.
+                temp = morpheme[morphemeIdx].split('/')
+                currentMorpheme = temp[0]
+                currentState = temp[-1]
+                prob += self.getObservationProb(self.state[currentState], self.dictionary[currentMorpheme])
+            else:
+                temp = morpheme[morphemeIdx].split('/')
+                next = morpheme[morphemeIdx+1].split('/')
+                currentMorpheme = temp[0]
+                currentState = temp[-1]
+                nextState = next[-1]
+                try :
+                    transitionInWordProb = self.getTransitionInWord(self.state[currentState], self.state[nextState])
+                except :
+                    transitionInWordProb = 0
+
+                try :
+                    observationProb = self.getObservationProb(self.state[currentState], self.dictionary[currentMorpheme])
+                except :
+                    observationProb = 0
+
+                prob += transitionInWordProb + observationProb
+
+        return prob
+
+        return
+
     def getObservationProb(self, currentState, currentWord):
-        return self.observationProb[currentState][self.dictionary[currentWord]]
+        return self.observationProb[currentState][currentWord]

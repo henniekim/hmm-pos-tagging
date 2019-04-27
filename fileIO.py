@@ -35,6 +35,7 @@ class Files :
 
         currentWord = []
         currentResult = []
+        self.parsedSentence = []
 
         for sentenceIdx in range (len(self.result)):
             # parsing 을 편하기 하기 위한 궁여지책...
@@ -51,13 +52,28 @@ class Files :
                 currentMorpheme.append(currentWord[wordIdx].split('\t'))
             self.parsedResult.append(currentMorpheme)
 
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-            # !!!! NOTICE : indexing 할 때 주의!!!! #
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+            # # SMASH 를 통해 제안된 형태소 열들 중복 제거하고 정리
+            # morphemeList = []
+            # for wordIdx in range (len(currentMorpheme)): # 어절 단위로 나누어서 추가
+            #     currentMorphemeList = []
+            #     morphemeSet = set() # 집합을 이용하여 중복 열 제거
+            #     for morphemeListIdx in range (1, len(currentMorpheme[wordIdx])):
+            #         currentMorphemePiece = []
+            #         tempMorpheme = currentMorpheme[wordIdx][morphemeListIdx].split(' ')[-1].split('+')
+            #         currentMorphemeOneWord = ''
             #
-            # self.parsedResult[sentenceIdx][WordIdx][문장 전체 + 형태소 분석 결과]
-            #                                         - 0번째 - 1번째~최대 32
-            # len으로 분석 결과 사용할 때에는 -1 해줘야 함
+            #         for morphemeIdx in range (len(tempMorpheme)): # 형태소 열을 '+ 형태로 끊어서 정리
+            #             if morphemeIdx == 0 :
+            #                 currentMorphemeOneWord = tempMorpheme[morphemeIdx].split('/')[0]
+            #             else :
+            #                 currentMorphemeOneWord = currentMorphemeOneWord+'+'+tempMorpheme[morphemeIdx].split('/')[0]
+            #         morphemeSet.add(currentMorphemeOneWord) # 집합에 추가 (중복 제거)
+            #     morphemeList.append(morphemeSet) # 추가한 형태소 열을 어절 단위로 추가한다.
+            # self.parsedSentence.append(morphemeList)
+
+
+            #제안된 형태소 열 모두 정리 완료
+            # self.parsedSentence[sentenceIdx][WordIdx][morphemeListIdx]
 
     def loadCorpus(self):
         fileObject = open("train.txt", "r")
